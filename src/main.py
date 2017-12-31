@@ -1,16 +1,13 @@
 from __future__ import division
 from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
 import sklearn.cross_validation
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-df = pd.read_csv('../data/february_2017.csv')
-
-#ax = df['CARRIER_DELAY'].plot(kind='bar')
-#ax = df['DAY_OF_MONTH'].plot()
-#fig = ax.get_figure() 
-#fig.savefig('output.png')i
+#read the CSV file
+df = pd.read_csv('../data/trimmed_february_2017.csv')
 
 #remove the last (empty) column as well as diverted and cancelled flights
 df.drop(df.columns[len(df.columns)-1], axis=1, inplace=True)
@@ -22,6 +19,7 @@ print df.isnull().sum()
 print "####################################################"
 
 #look at our data frame
+print df.dtypes
 print df.describe()
 
 #calculate percentage of delays >1h and >10h
@@ -40,24 +38,27 @@ print "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
 
 #prepare data for linear regression
 df2 = df
+
 df2['UNIQUE_CARRIER'] = df2['UNIQUE_CARRIER'].astype('category')
 df2['UNIQUE_CARRIER_CODE'] = df2['UNIQUE_CARRIER'].cat.codes
-
 df2 = df2.drop('UNIQUE_CARRIER', axis=1)
+
+#print (df2[ pd.to_numeric(df2['CRS_ARR_TIME'], errors='coerce').isnull()])
+#df2['CRS_ARR_TIME_HOUR'] = pd.to_numeric(str(df['CRS_ARR_TIME']), errors='coerce')
+#df2['CRS_ARR_TIME_HOUR'] = pd.to_datetime(df2['CRS_ARR_TIME'], format='%H%M').dt.hour
+#df2['CRS_ARR_TIME_HOUR'] = int(str(df2.CRS_ARR_TIME)[:2])
+#df2['CRS_ARR_TIME_MINS'] = int(str(df2.CRS_ARR_TIME)[2:])
+#df2['CRS_DEP_TIME_HOUR'] = int(str(df2.CRS_DEP_TIME)[:2])
+#df2['CRS_DEP_TIME_MINS'] = int(str(df2.CRS_DEP_TIME)[2:])
+
+df2 = df2.drop('CRS_DEP_TIME', axis=1)
+df2 = df2.drop('CRS_ARR_TIME', axis=1)
+
 X = df2.drop('ARR_DELAY', axis=1)
 
-#fit the model
-lm = LinearRegression()
-lm.fit(X, df2.ARR_DELAY)
-print "Estimated intercept coefficient: ", lm.intercept_
-print "Number of coefficients: ", len(lm.coef_)
-
-dfCoef = pd.DataFrame(zip(X.columns, lm.coef_), columns=['feature', 'estimated coefficient'])
-print dfCoef
-
 #do the actual Linear Regression
-#split the set into train & test
 X_train, X_test, Y_train, Y_test = sklearn.cross_validation.train_test_split(X, df2.ARR_DELAY, test_size=0.33, random_state=5)
+print "Train & Test datasets shapes:"
 print X_train.shape
 print X_test.shape
 print Y_train.shape
@@ -65,8 +66,30 @@ print Y_test.shape
 
 lm = LinearRegression()
 lm.fit(X_train, Y_train)
+print "Estimated intercept coefficient: ", lm.intercept_
+print "Number of coefficients: ", len(lm.coef_)
+
+dfCoef = pd.DataFrame(zip(X.columns, lm.coef_), columns=['feature', 'estimated coefficient'])
+print dfCoef
+
 pred_train = lm.predict(X_train)
 pred_test = lm.predict(X_test)
 
-print "Fit a model X_train, and calculate MSE with Y_train:", np.mean((Y_train - lm.predict(X_train)) ** 2)
-print "Fit a model X_test, and calculate MSE with Y_test:", np.mean((Y_test - lm.predict(X_test)) ** 2)
+with open('predTest.txt', 'w') as file:
+	for x in pred_test:
+		file.write(str(x) + "\n")
+
+print "mean of predicted values: ", np.mean(pred_test)
+
+#Assess the results 
+print "MSE of train set: ", np.mean((Y_train - lm.predict(X_train)) ** 2)
+print "MSE of test set: ", np.mean((Y_test - lm.predict(X_test)) ** 2)
+print "RMSE of train set: ", np.sqrt(np.mean((Y_train - lm.predict(X_train)) ** 2))
+print "RMSE of test set: ", np.sqrt(np.mean((Y_test - lm.predict(X_test)) ** 2)) 
+
+plt.scatter(lm.predict(X_train), lm.predict(X_train) - Y_train, c='b', s=40, alpha=0.5)
+plt.scatter(lm.predict(X_test), lm.predict(X_test) - Y_test, c='g', s=40, alpha=0.51)
+
+plt.hlines(y = 0, xmin = -10, xmax = 30)
+
+plt.show()
