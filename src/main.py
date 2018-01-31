@@ -56,6 +56,12 @@ df2 = df2.drop('CRS_ARR_TIME', axis=1)
 
 X = df2.drop('ARR_DELAY', axis=1)
 
+#################################################################################################
+#### GET METARS AND UPDATE WEATHER DATA IN THE DATA FRAME ----> HERE <----                   ####
+
+#### MOVE THE NEXT PART (Linear Regression + other models) to Model_Retrainer component      ####
+#################################################################################################
+
 #do the actual Linear Regression
 X_train, X_test, Y_train, Y_test = sklearn.cross_validation.train_test_split(X, df2.ARR_DELAY, test_size=0.33, random_state=5)
 print "Train & Test datasets shapes:"

@@ -2,6 +2,8 @@
 from metar import Metar
 import urllib2, string, time, datetime
 
+metarDict = { }
+
 def extract_sky_cover(cover_string):
 	return {
 		'CLR': 0,
@@ -19,6 +21,7 @@ def get_weather_data_for_airports(airport_codes):
 	for code in airport_codes:
 		url = 'https://www.ogimet.com/display_metars2.php?lang=en&lugar=[[AIRPORT_CODE]]&tipo=ALL&ord=REV&nil=SI&fmt=txt&ano=2018&mes=01&day=01&hora=13&anof=2018&mesf=01&dayf=27&horaf=14&minf=00&send=send'
 		url = string.replace(url, '[[AIRPORT_CODE]]', code)
+		# TODO: Inject dates to the URL based on time.now()
 		response = urllib2.urlopen(url)
 		print ">>>>>>>>>>>> WEATHER INFO FOR {0} <<<<<<<<<<<<<<".format(code)
 		# drop html prior to actual weather reports
@@ -40,6 +43,8 @@ def get_distinct_metar_reports(body, destFile):
 		report = string.replace(report, "$", "")
 		# remove extra whitespaces
 		report = ' '.join(report.split())
+		# create the dictionary key before dropping the datetime part of the report
+		key = create_dict_key_from_metar(report)
 		report = report[13:]
 		# remove TEMPO elements, since the parser doesn't handle those well
 		try:
@@ -51,28 +56,36 @@ def get_distinct_metar_reports(body, destFile):
 		# just to make sure the report string can be processed by our parser
 		Metar.Metar(report)
 		destFile.write(report + "\n")
+		# create dictionary in form: ('AIRPORT_CODE', 'DATE_TIME'): 'METAR'
+		metarDict[key] = report
 		
+def create_dict_key_from_metar(report):
+	date = report[:8]
+	time = report[8:12]
+	airportCode = report[19:23]
+	key = (airportCode, date + "T" + time)		
+	return key
+
+def find_most_accurate_metar(airport_code, year, month, day, time):
+	print ""
+	# 1. load the dictionary
+	# 2. filter entries which satisfy airport & date condition
+	# 3. find the METAR closest to a given arrival/departure time
 
 # get a distinct list of all airports >>CHECKED<<
 # get the METAR data for all these airports for whole month back => API calls from python >>CHECKED<<
-# create dictionary in form [(AIRPORT_CODE, TIME), WEATHER STRING]
+# create dictionary in form [(AIRPORT_CODE, TIME), WEATHER STRING] >>CHECKED<<
 # apply a function to all rows in the DataFrame that will:
 # 	a) create access key based on airport code and time
 #	b) get the METAR string from the local dictionary
 #	b) parse the string
 #	c) set the necessary attributes in DF
 
-def get_weather_data(airport_code, time):
+def get_weather_data(df):
 	print ""
 	# parse the date & time
 	# create URL to get METAR
 	# parse the response
-
-#obs = Metar.Metar('METAR KEWR 111851Z VRB03G19KT 2SM R04R/3000VP6000FT TSRA BR FEW015 BKN040CB BKN065 OVC200 22/22 A2987 RMK AO2 PK WND 29028/1817 WSHFT 1812 TSB05RAB22 SLP114 FRQ LTGICCCCG TS OHD AND NW -N-E MOV NE P0013 T02270215')
-
-#metarString = """METAR KLAX 191453Z 11005KT 7SM SCT009 OVC010 14/13 A3001
-#                        RMK AO2 SLP163 SCT V BKN T01440133
-#                        53001 $"""
 
 metarString = """METAR KLAX 091153Z 11018KT 3SM +RA BR BKN005 BKN012 OVC025
                         15/15 A2967 RMK AO2 SLP044 VIS N
@@ -110,3 +123,4 @@ print obs.string()
 
 codes = ['EPWA', 'KLAX']
 get_weather_data_for_airports(codes)
+print metarDict
