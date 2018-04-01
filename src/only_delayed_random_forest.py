@@ -22,6 +22,13 @@ df.drop(df.columns[len(df.columns)-1], axis=1, inplace=True)
 df.drop(df[df.DIVERTED == 1].index, inplace=True)
 df.drop(df[df.CANCELLED == 1].index, inplace=True)
 
+# >>>>>>>>>>>>>>>>>>>>>>>> TRAIN THE MODEL ONLY ON FLIGHTS THAT WERE LATE <<<<<<<<<<<<<<<<<<<<<<<<<<
+df = df[df.ARR_DELAY > 0]
+
+# >>>>>>>>>>>>>>>>>>>>>>>> TRAIN THE MODEL ONLY ON FLIGHTS FROM/TO LAX <<<<<<<<<<<<<<<<<<<<<<<<<<
+mask = (df.ORIGIN == 'LAX') | (df.DEST == 'LAX')
+df = df.ix[mask, ["YEAR","MONTH","DAY_OF_MONTH","DAY_OF_WEEK","UNIQUE_CARRIER","ORIGIN_AIRPORT_ID","ORIGIN","DEST_AIRPORT_ID","DEST","CRS_DEP_TIME","CRS_ARR_TIME","ARR_DELAY","CANCELLED","DIVERTED","CRS_ELAPSED_TIME","DISTANCE"]]
+
 #change IATA to ICAO codes
 df['ORIGIN'] = df['ORIGIN'].map(airport_codes_df.set_index('IATA')['ICAO'])
 df['DEST'] = df['DEST'].map(airport_codes_df.set_index('IATA')['ICAO'])
@@ -34,6 +41,8 @@ df['DEST_SIZE'] = df['DEST_SIZE'].astype('float32')
 
 #prepare data for random forest
 df2 = df
+
+print df2.head()
 
 df2['UNIQUE_CARRIER'] = df2['UNIQUE_CARRIER'].astype('category')
 df2['UNIQUE_CARRIER_CODE'] = df2['UNIQUE_CARRIER'].cat.codes

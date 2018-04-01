@@ -5,9 +5,11 @@ import sklearn.cross_validation
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import metartest
 
 #read the CSV file
 df = pd.read_csv('../data/trimmed_february_2017.csv')
+airport_codes_df = pd.read_csv('../data/iata_icao_mappings.csv')
 
 #remove the last (empty) column as well as diverted and cancelled flights
 df.drop(df.columns[len(df.columns)-1], axis=1, inplace=True)
@@ -22,6 +24,10 @@ print "####################################################"
 print df.dtypes
 print df.describe()
 
+#change IATA to ICAO codes
+df['Origin'] = df['Origin'].map(airport_codes_df.set_index('IATA')['ICAO'])
+df['Dest'] = df['Dest'].map(airport_codes_df.set_index('IATA')['ICAO'])
+
 #calculate percentage of delays >1h and >10h
 total = len(df)
 print "Total flights: ", total
@@ -35,6 +41,16 @@ delay10h = len(df[df.ARR_DELAY > 600])
 print(str(delay10h) + " - " + str(round(delay10h/total, 30))  +  "% of all flights")
 
 print "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
+
+# ??? TEMP ??? ??? TEMP ??? ??? TEMP ??? ??? TEMP ??? ??? TEMP ??? ??? TEMP ??? ??? TEMP ???
+
+def update_weather_data_for_row(row):
+	find_most_accurate_metar(row.ORIGIN_AIRPORT, year, month, day, time)	
+
+df.apply(update_weather_data_for_row, axis=1)
+
+# ??? TEMP ??? ??? TEMP ??? ??? TEMP ??? ??? TEMP ??? ??? TEMP ??? ??? TEMP ??? ??? TEMP ???
+
 
 #prepare data for linear regression
 df2 = df
@@ -80,6 +96,10 @@ print dfCoef
 
 pred_train = lm.predict(X_train)
 pred_test = lm.predict(X_test)
+
+for i in range (0, 100):	
+	print "pred_test[]: ", pred_test[i]
+	print "y_test[]: ", Y_test.iloc[i]
 
 with open('predTest.txt', 'w') as file:
 	for x in pred_test:
