@@ -22,6 +22,11 @@ df.drop(df.columns[len(df.columns)-1], axis=1, inplace=True)
 df.drop(df[df.DIVERTED == 1].index, inplace=True)
 df.drop(df[df.CANCELLED == 1].index, inplace=True)
 
+#check total number of flights, total numberof delays and percentage
+print "Total number of flights: ", len(df)
+print "Total number of delays: ", len(df[df['ARR_DELAY'] > 0])
+print "Percentage of flights delayed", len(df[df['ARR_DELAY'] > 0]) / len(df) * 100, "%"
+
 #change IATA to ICAO codes
 df['ORIGIN'] = df['ORIGIN'].map(airport_codes_df.set_index('IATA')['ICAO'])
 df['DEST'] = df['DEST'].map(airport_codes_df.set_index('IATA')['ICAO'])
@@ -43,24 +48,27 @@ worst10carriers = worst10carriers.groupby(['UNIQUE_CARRIER'])['ARR_DELAY'].mean(
 worst10carriers = worst10carriers.sort_values().nlargest(10)
 print worst10carriers
 
-#worst 10 carriers by PERCENTAGE (TODO) or number  of delays
-print "Worst 10 carriers by number of delays: "
+#worst 10 carriers by PERCENTAGE of delays
+print "Worst 10 carriers by percentage of delays: "
 totalCarrierFlights = df
 totalCarrierFlights = totalCarrierFlights.groupby(['UNIQUE_CARRIER']).size()
-print totalCarrierFlights
+carrierDelays = df[df['ARR_DELAY'] > 0]
+carrierDelays = carrierDelays.groupby(['UNIQUE_CARRIER']).size()
+print carrierDelays.div(totalCarrierFlights, level='UNIQUE_CARRIER').sort_values().nlargest(10) * 100
 
-top10carriers = df[df['ARR_DELAY'] > 0]
-top10carriers = top10carriers.groupby(['UNIQUE_CARRIER']).size()
-top10carriers = top10carriers.sort_values()
-print top10carriers
-
-#worst 10 airports to depart from
-print "10 worst airports to depart from: "
+#worst 10 airports to depart from (mean of delay)
+print "10 worst airports to depart from: (by mean delay)"
 worstAirportsDep = df
 worstAirportsDep = worstAirportsDep.groupby(['ORIGIN'])['ARR_DELAY'].mean()
 print worstAirportsDep.sort_values().nlargest(10)
 
-#worst 10 airports to fly to
+#worst 10 airports to fly to (% of flights)
+print "10 worst airports to fly to: (by percentage of flights delayed)"
+airportsFlights = df
+airportsFlights = airportsFlights.groupby(['DEST']).size()
+airportsDelayed = df[df['ARR_DELAY'] > 0]
+airportsDelayed = airportsDelayed.groupby(['DEST']).size()
+print airportsDelayed.div(airportsFlights, level='DEST').sort_values().nlargest(10) * 100
 
 #flight duration vs average delay
 
@@ -68,12 +76,19 @@ print worstAirportsDep.sort_values().nlargest(10)
 #departure time vs average delay
 
 
-#airport size vs average delay
+#origin airport size vs average delay
 print "Origin airport size vs average delay: "
-sizeDelay = df
-sizeDelay = sizeDelay.groupby(['ORIGIN_SIZE'])['ARR_DELAY'].mean()
-sizeDelay = sizeDelay.sort_values()
-print sizeDelay
+depSizeDelay = df
+depSizeDelay = depSizeDelay.groupby(['ORIGIN_SIZE'])['ARR_DELAY'].mean()
+depSizeDelay = depSizeDelay.sort_values(ascending=False)
+print depSizeDelay
+
+#destination airport size vs average delay
+print "Destination airport size vs average delay: "
+destSizeDelay = df
+destSizeDelay = destSizeDelay.groupby(['DEST_SIZE'])['ARR_DELAY'].mean()
+destSizeDelay = destSizeDelay.sort_values(ascending=False)
+print destSizeDelay
 
 #month vs average delay
 
