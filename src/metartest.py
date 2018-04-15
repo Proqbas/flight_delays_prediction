@@ -78,9 +78,24 @@ def create_dict_key_from_metar(report):
 	return key
 
 def find_most_accurate_metar(airport_code, year, month, day, time):
-	key = (airport_code, year + month + day + "T" + time)
+	key = (str(airport_code), str(year) + str(month).zfill(2) + str(day).zfill(2) + "T" + str(time).zfill(4))
 	potentialEntries = {k: v for k, v in metarDict.items() if k[0] == airport_code and k[1].startswith('' + year + month + day)}
-	print len(potentialEntries)
+	smallestDiffMinutes = 9999
+	smallestDiffKey = ()
+	flightTime = datetime.strptime(str(year) + '-' + str(month).zfill(2) + '-' + str(day).zfill(2) + ' ' + str(time).zfill(4), '%Y-%m-%d %H%M')
+	for metarKey, metar in potentialEntries.items():
+		metarTime = datetime.strptime(metarKey[1], '%Y%m%dT%H%M')
+		minutes_diff = abs((flightTime - metarTime).total_seconds() / 60.0)
+		if(minutes_diff < smallesDiffMinutes):
+			smallesDiffMinutes = minutes_diff
+			smallestDiffKey = metarKey
+
+	if smallestDiffKey in potentialEntries:
+		return potentialEntries[smallestDiffKey]
+	else:
+		raise ValueError('no METAR found for requested key: ' + key)
+#	for metar, index in potentialEntries:
+#		timeDiff = 
 	# todo: function to find closest time of metars
 	# 1. load the dictionary
 	# 2. filter entries which satisfy airport & date condition

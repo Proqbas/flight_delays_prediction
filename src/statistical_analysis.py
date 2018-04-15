@@ -3,13 +3,35 @@ from sklearn import datasets
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
+#from operator import itemgetter
+import operator
 import sklearn.cross_validation
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+def labelFlightDuration(row):
+	if(row[2] == 5):
+		print "5"
+	duration = row['CRS_ELAPSED_TIME']
+	if(duration <= 60):
+		row['FLIGHT_DURATION_CAT'] = 0
+		return 
+	if(duration <= 120):
+		row['FLIGHT_DURATION_CAT'] = 1
+		return 
+	if(duration <= 240):
+		row['FLIGHT_DURATION_CAT'] = 2
+		return 
+	if(duration <= 480):
+		row['FLIGHT_DURATION_CAT'] = 3
+		return 
+	row['FLIGHT_DURATION_CAT'] = 4
+
 #read the CSV file
 df = pd.read_csv('../data/test_feb_17_data.csv', dtype={col: np.float32 for col in ['ARR_DELAY', 'CANCELLED', 'DIVERTED', 'CRS_ELAPSED_TIME', 'DISTANCE', 'ORIGIN_SIZE', 'DEST_SIZE']})
+
+print df.dtypes
 
 airport_codes_df = pd.read_csv('../data/iata_icao_mapping.csv')
 airport_codes_df = airport_codes_df.loc[~airport_codes_df.index.duplicated(keep='first')]
@@ -71,10 +93,30 @@ airportsDelayed = airportsDelayed.groupby(['DEST']).size()
 print airportsDelayed.div(airportsFlights, level='DEST').sort_values().nlargest(10) * 100
 
 #flight duration vs average delay
-
+#durationVsDelay = df
+#durationVsDelay = durationVsDelay.sort_values(by='DAY_OF_MONTH', ascending=True)
+#durationVsDelay = durationVsDelay.apply(lambda row: labelFlightDuration(row), axis=1)
+#durationVsDelay = durationVsDelay.groupby(['FLIGHT_DURATION_CAT'])['ARR_DELAY'].mean()
+#durationVsDelay = durationVsDelay.sort_values(ascending=False)
+#print durationVsDelay
 
 #departure time vs average delay
+print "Departure time vs average delay: "
+depVsDelay = df
+depVsDelay['CRS_DEP_TIME'] = depVsDelay.CRS_DEP_TIME.astype(str)
+depVsDelay['CRS_DEP_TIME'] = depVsDelay['CRS_DEP_TIME'].str.zfill(4) 
+depVsDelay['CRS_DEP_TIME'] = depVsDelay['CRS_DEP_TIME'].str.slice(start=0, stop=2)
+depDelayResult = depVsDelay.groupby(['CRS_DEP_TIME'])['ARR_DELAY'].mean()
+print depDelayResult
 
+#arrival time vs average delay
+print "Arrival time vs average delay: "
+arrVsDelay = df
+arrVsDelay['CRS_ARR_TIME'] = arrVsDelay.CRS_ARR_TIME.astype(str)
+arrVsDelay['CRS_ARR_TIME'] = arrVsDelay['CRS_ARR_TIME'].str.zfill(4) 
+arrVsDelay['CRS_ARR_TIME'] = arrVsDelay['CRS_ARR_TIME'].str.slice(start=0, stop=2)
+arrDelayResult = arrVsDelay.groupby(['CRS_ARR_TIME'])['ARR_DELAY'].mean()
+print arrDelayResult
 
 #origin airport size vs average delay
 print "Origin airport size vs average delay: "
@@ -91,6 +133,43 @@ destSizeDelay = destSizeDelay.sort_values(ascending=False)
 print destSizeDelay
 
 #month vs average delay
+print "Month vs average delay: "
+monthDelay = df
+monthDelay = monthDelay.groupby(['MONTH'])['ARR_DELAY'].mean()
+print monthDelay
+
+#day of week vs average delay
+print "Day of week vs average delay: "
+weekdayDelay = df
+weekdayDelay = weekdayDelay.groupby(['DAY_OF_WEEK'])['ARR_DELAY'].mean()
+print weekdayDelay
+
+#most delayed routes for American Airlines
+#step 1 - create list of all routes and delays on that route
+df1 = df
+df1 = df1[df1['UNIQUE_CARRIER']=='AA'][['ORIGIN', 'DEST', 'ARR_DELAY']]
+routes = dict()
+for ind, row in df1.iterrows():
+	if pd.isnull(row['ARR_DELAY']) : continue
+	route = str(row['ORIGIN']) + '-' + str(row['DEST'])
+	if route in routes.keys():
+		routes[route].append(row['ARR_DELAY'])
+	else:
+		routes[route] = [row['ARR_DELAY']]
+
+routes_list = []
+mean_values = []
+for key, value in routes.items():
+	routes_list.append([key, value])
+	value2 = [min(90, v) for v in value]
+	mean_values.append([key, np.mean(value2)])
+routes_list.sort()
+mean_values.sort(key=operator.itemgetter(1), reverse=True)
+for val in mean_values[:20]:
+	print val[0], ": ", val[1]
+#step 2 - calculate mean delay for each route
+
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 
 
 #drop redundant columns

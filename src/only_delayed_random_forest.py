@@ -3,6 +3,7 @@ from sklearn import datasets
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
+from sklearn.decomposition import PCA
 import sklearn.cross_validation
 import pandas as pd
 import numpy as np
@@ -114,3 +115,19 @@ print "MSE of train set: ", np.mean((Y_train - lm.predict(X_train)) ** 2)
 print "MSE of test set: ", np.mean((Y_test - lm.predict(X_test)) ** 2)
 print "RMSE of train set: ", np.sqrt(np.mean((Y_train - lm.predict(X_train)) ** 2))
 print "RMSE of test set: ", np.sqrt(np.mean((Y_test - lm.predict(X_test)) ** 2))
+
+#PCA
+print "PCA results: "
+pca = PCA(n_components=6)
+pca.fit(X_train)
+#print(pca.explained_variance_ratio_)
+#print(pca.components_)
+#print(pca.singular_values_)
+print "Before PCA fitting: "
+print X_train.head()
+print pca.fit(X_train)
+print "After PCA fitting: "
+#print X_train.head()
+print pca.components_
+print pca.explained_variance_ratio_
+print pca.explained_variance_
