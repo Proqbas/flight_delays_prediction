@@ -26,14 +26,16 @@ print "With NaN's: ", df.shape
 df = df.dropna()
 print "Without NaN's: ", df.shape
 
+df2 = df.head(10000)
+df2.MONTH = 4
+df2.drop(df2[df2.DAY_OF_MONTH == 31].index, inplace=True)
+
 metarHelper = MetarHelper()
 metarHelper.read_metar_dict_from_csv()
+print len(metarHelper.metarDict)
+df2.apply(lambda x: metarHelper.find_most_accurate_metar(x.ORIGIN, x.YEAR, x.MONTH, x.DAY_OF_MONTH, x.CRS_DEP_TIME), axis=1)
 #metarHelper.get_weather_data_for_airports(df['ORIGIN'].unique())
 #metarHelper.write_metar_dict_to_csv()
 
 print "Finished!" 
 
-#def update_weather_data_for_row(row):
-#	find_most_accurate_metar(row.ORIGIN_AIRPORT, year, month, day, time)	
-
-#df.apply(update_weather_data_for_row, axis=1)

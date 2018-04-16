@@ -74,21 +74,23 @@ class MetarHelper:
 
 	def find_most_accurate_metar(self, airport_code, year, month, day, time):
 		key = (str(airport_code), str(year) + str(month).zfill(2) + str(day).zfill(2) + "T" + str(time).zfill(4))
-		potentialEntries = {k: v for k, v in self.metarDict.items() if k[0] == airport_code and k[1].startswith('' + year + month + day)}
+		potentialEntries = {k: v for k, v in self.metarDict.items() if k[0] == airport_code and k[1].startswith(str(year) + str(month).zfill(2) + str(day).zfill(2))}
 		smallestDiffMinutes = 9999
 		smallestDiffKey = ()
-		flightTime = datetime.strptime(str(year) + '-' + str(month).zfill(2) + '-' + str(day).zfill(2) + ' ' + str(time).zfill(4), '%Y-%m-%d %H%M')
+		flightTime = datetime.datetime.strptime(str(year) + '-' + str(month).zfill(2) + '-' + str(day).zfill(2) + ' ' + str(time).zfill(4), '%Y-%m-%d %H%M')
 		for metarKey, metar in potentialEntries.items():
-			metarTime = datetime.strptime(metarKey[1], '%Y%m%dT%H%M')
+			metarTime = datetime.datetime.strptime(metarKey[1], '%Y%m%dT%H%M')
 			minutes_diff = abs((flightTime - metarTime).total_seconds() / 60.0)
-			if(minutes_diff < smallesDiffMinutes):
-				smallesDiffMinutes = minutes_diff
+			if(minutes_diff < smallestDiffMinutes):
+				smallestDiffMinutes = minutes_diff
 				smallestDiffKey = metarKey
 
 		if smallestDiffKey in potentialEntries:
+			#print "Found METAR for key {0}, time difference (minutes): {1}".format(key, smallestDiffMinutes)
 			return potentialEntries[smallestDiffKey]
 		else:
-			raise ValueError('no METAR found for requested key: ' + key)
+			print "no METAR found for requested key: %s" % (key,)
+			#raise ValueError('no METAR found for requested key: ' + key)
 
 	def get_weather_data(self, df):
 		# parse the date & time
