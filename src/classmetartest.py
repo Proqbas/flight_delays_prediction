@@ -14,8 +14,10 @@ class MetarHelper:
 		now = datetime.datetime.now()
 		beginning = datetime.datetime.now() - datetime.timedelta(days=30)
 		for code in airport_codes:
+			if code is None:
+				continue
 			url = 'https://www.ogimet.com/display_metars2.php?lang=en&lugar=[[AIRPORT_CODE]]&tipo=ALL&ord=REV&nil=SI&fmt=txt&ano=[[YEAR_FROM]]&mes=[[MONTH_FROM]]&day=[[DAY_FROM]]&hora=01&anof=[[YEAR_TO]]&mesf=[[MONTH_TO]]&dayf=[[DAY_TO]]&horaf=23&minf=00&send=send'
-			url = string.replace(url, '[[AIRPORT_CODE]]', code)
+			url = string.replace(url, '[[AIRPORT_CODE]]', str(code))
 			url = string.replace(url, '[[YEAR_FROM]]', str(beginning.year))
 			url = string.replace(url, '[[YEAR_TO]]', str(now.year))
 			url = string.replace(url, '[[MONTH_FROM]]', str(beginning.month))
@@ -30,7 +32,7 @@ class MetarHelper:
 			html = html.split("\n",2)[2]
 			# drop deep TAF reports section
 			html = html.split("\n\n#",1)[0]
-			get_distinct_metar_reports(html, destFile)
+			self.get_distinct_metar_reports(html, destFile)
 			response.close()  # best practice to close the file
 
 	def get_distinct_metar_reports(self, body, destFile):
@@ -44,7 +46,7 @@ class MetarHelper:
 			# remove extra whitespaces
 			report = ' '.join(report.split())
 			# create the dictionary key before dropping the datetime part of the report
-			key = create_dict_key_from_metar(report)
+			key = self.create_dict_key_from_metar(report)
 			report = report[13:]
 			# remove TEMPO elements, since the parser doesn't handle those well
 			try:
@@ -58,8 +60,8 @@ class MetarHelper:
 				Metar.Metar(report)
 				destFile.write(report + "\n")
 				# create dictionary in form: ('AIRPORT_CODE', 'DATE_TIME'): 'METAR'
-				if not key in metarDict:
-					metarDict[key] = report
+				if not key in self.metarDict:
+					self.metarDict[key] = report
 			except Metar.ParserError:
 				print "could not parse report: ", report
 			
@@ -72,7 +74,7 @@ class MetarHelper:
 
 	def find_most_accurate_metar(self, airport_code, year, month, day, time):
 		key = (str(airport_code), str(year) + str(month).zfill(2) + str(day).zfill(2) + "T" + str(time).zfill(4))
-		potentialEntries = {k: v for k, v in metarDict.items() if k[0] == airport_code and k[1].startswith('' + year + month + day)}
+		potentialEntries = {k: v for k, v in self.metarDict.items() if k[0] == airport_code and k[1].startswith('' + year + month + day)}
 		smallestDiffMinutes = 9999
 		smallestDiffKey = ()
 		flightTime = datetime.strptime(str(year) + '-' + str(month).zfill(2) + '-' + str(day).zfill(2) + ' ' + str(time).zfill(4), '%Y-%m-%d %H%M')
@@ -95,11 +97,10 @@ class MetarHelper:
 		print ""
 
 	def write_metar_dict_to_csv(self):
-		#fieldnames = [('airport_code', 'datetime')]
-		with open('metar_dictionary.csv', 'wb') as f:  # Just use 'w' mode in 3.x
+		with open('metar_dictionary.csv', 'a') as f:  # Use 'wb' to erase previous work
 			writer = csv.writer(f, delimiter=';')
-			for key in metarDict:
-				writer.writerow([key[0], key[1], metarDict[key]])
+			for key in self.metarDict:
+				writer.writerow([key[0], key[1], self.metarDict[key]])
 
 	def read_metar_dict_from_csv(self):
 		with open('metar_dictionary.csv') as csvfile:
@@ -107,9 +108,9 @@ class MetarHelper:
 			for row in reader:
 				key = (row[0], row[1])
 				report = row[2]
-				if not key in metarDict:
-					metarDict[key] = report
-				print "(" + row[0] + ", " + row[1] + "): " + row[2]
+				if not key in self.metarDict:
+					self.metarDict[key] = report
+				#print "(" + row[0] + ", " + row[1] + "): " + row[2]
 
 	def extract_sky_cover(self, cover_string):
 			return {
