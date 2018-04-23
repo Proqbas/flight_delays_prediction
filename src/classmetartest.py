@@ -92,20 +92,44 @@ class MetarHelper:
 			print "no METAR found for requested key: %s" % (key,)
 			#raise ValueError('no METAR found for requested key: ' + key)
 
-	def get_weather_data(self, df):
-		# parse the date & time
-		# create URL to get METAR
-		# parse the response
-		print ""
+	def get_origin_weather_data(self, row):
+		matchingMetar = self.find_most_accurate_metar(row.ORIGIN, row.YEAR, row.MONTH, row.DAY_OF_MONTH, row.CRS_DEP_TIME)
+		if matchingMetar == None:
+			return row
+		try:
+			obs = Metar.Metar(matchingMetar)
+			row['ORIGIN_TEMP'] = self.extract_temperature(obs)
+			row['ORIGIN_WIND_SPEED'] = self.extract_wind_speed(obs)
+			row['ORIGIN_HAS_PRECIPITATION'] = self.extract_precipitation(obs)
+			row['ORIGIN_HAS_EXTREME'] = self.extract_extreme_conditions(obs)
+			return row
+		except Metar.ParserError:	
+			print "Unable to parse metar: " + matchingMetar
+			return row
+			
+	def get_destination_weather_data(self, row):
+		matchingMetar = self.find_most_accurate_metar(row.DEST, row.YEAR, row.MONTH, row.DAY_OF_MONTH, row.CRS_ARR_TIME)
+		if matchingMetar == None:
+			return row
+		try:
+			obs = Metar.Metar(matchingMetar)
+			row['DEST_TEMP'] = self.extract_temperature(obs)
+			row['DEST_WIND_SPEED'] = self.extract_wind_speed(obs)
+			row['DEST_HAS_PRECIPITATION'] = self.extract_precipitation(obs)
+			row['DEST_HAS_EXTREME'] = self.extract_extreme_conditions(obs)
+			return row
+		except Metar.ParserError:	
+			print "Unable to parse metar: " + matchingMetar
+			return row
 
 	def write_metar_dict_to_csv(self):
-		with open('metar_dictionary.csv', 'a') as f:  # Use 'wb' to erase previous work
+		with open('metar_dictionary_jan2018.csv', 'a') as f:  # Use 'wb' to erase previous work
 			writer = csv.writer(f, delimiter=';')
 			for key in self.metarDict:
 				writer.writerow([key[0], key[1], self.metarDict[key]])
 
 	def read_metar_dict_from_csv(self):
-		with open('metar_dictionary.csv') as csvfile:
+		with open('metar_dictionary_jan2018.csv') as csvfile:
 			reader = csv.reader(csvfile, delimiter=';')
 			for row in reader:
 				key = (row[0], row[1])
@@ -124,3 +148,37 @@ class MetarHelper:
 				'OVC': 4,
 				'VV': 4
 			}.get(cover_string, None)
+
+	def extract_temperature(self, obs):
+		if obs.temp == None:
+			return 0
+		else:
+			return obs.temp.value()
+		
+	def extract_wind_speed(self, obs):
+		if obs.wind_speed == None:
+			return 0
+		else:
+			return obs.wind_speed.value()
+		
+	def extract_precipitation(self, obs):
+		if(obs.weather):
+			prec_list = ("drizzle", "rain", "snow", "snow grains", "ice crystals", "ice pellets", "hail","snow pellets","unknown precipitation")
+			if any(x in obs.present_weather() for x in prec_list):
+				return 1
+			else:
+				return 0
+		else:
+			return 0
+		
+	def extract_extreme_conditions(self, obs):
+		if(obs.weather):
+			extreme_list = ("blowing","showers","thunderstorm","freezing", 
+			"mist","fog","smoke","volcanic ash","dust","sand","haze","spray",
+			"sand whirls","squalls","funnel cloud","sandstorm","dust storm")
+			if any(x in obs.present_weather() for x in extreme_list):
+				return 1
+			else:
+				return 0
+		else:
+			return 0
