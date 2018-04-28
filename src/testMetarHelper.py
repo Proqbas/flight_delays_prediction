@@ -26,7 +26,7 @@ print "With NaN's: ", df.shape
 df = df.dropna()
 print "Without NaN's: ", df.shape
 
-df2 = df.head(100)
+df2 = df.head(10000)
 #df2.MONTH = 4
 #df2.drop(df2[df2.DAY_OF_MONTH == 31].index, inplace=True)
 

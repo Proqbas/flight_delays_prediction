@@ -29,6 +29,8 @@ def labelFlightDuration(row):
 	row['FLIGHT_DURATION_CAT'] = 4
 
 #read the CSV file
+#../data/test_feb_17_data.csv
+#../data/january_2018.csv
 df = pd.read_csv('../data/test_feb_17_data.csv', dtype={col: np.float32 for col in ['ARR_DELAY', 'CANCELLED', 'DIVERTED', 'CRS_ELAPSED_TIME', 'DISTANCE', 'ORIGIN_SIZE', 'DEST_SIZE']})
 
 print df.dtypes
@@ -43,6 +45,9 @@ airport_sizes_df = pd.read_csv('../data/airports_operations.csv')
 df.drop(df.columns[len(df.columns)-1], axis=1, inplace=True)
 df.drop(df[df.DIVERTED == 1].index, inplace=True)
 df.drop(df[df.CANCELLED == 1].index, inplace=True)
+
+#remove outliers
+df.drop(df[df.ARR_DELAY > 480].index, inplace=True)
 
 #check total number of flights, total numberof delays and percentage
 print "Total number of flights: ", len(df)
@@ -157,6 +162,7 @@ for ind, row in df1.iterrows():
 	else:
 		routes[route] = [row['ARR_DELAY']]
 
+#step 2 - calculate mean delay for each route
 routes_list = []
 mean_values = []
 for key, value in routes.items():
@@ -167,32 +173,54 @@ routes_list.sort()
 mean_values.sort(key=operator.itemgetter(1), reverse=True)
 for val in mean_values[:20]:
 	print val[0], ": ", val[1]
-#step 2 - calculate mean delay for each route
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 
+#weather conditions vs delay
+df2 = pd.read_csv('january_2018_df_with_weather.csv')
+totalDelays = df2[df2.ARR_DELAY > 0]
+extremeFlights = df2[(df2.ORIGIN_HAS_EXTREME == 1) | (df2.DEST_HAS_EXTREME == 1)]
+extremeDelays = totalDelays[(totalDelays.ORIGIN_HAS_EXTREME == 1) | (totalDelays.DEST_HAS_EXTREME == 1)]
+precipitationFlights = df2[(df2.ORIGIN_HAS_PRECIPITATION == 1) | (df2.DEST_HAS_PRECIPITATION == 1)]
+precipitationDelays = totalDelays[(totalDelays.ORIGIN_HAS_PRECIPITATION == 1) | (totalDelays.DEST_HAS_PRECIPITATION == 1)]
+print "Flights delayed when extreme conditions upon departure/arrival: ", extremeDelays.size / totalDelays.size * 100, "%"
+print "Percentage of flights delayed when extreme conditions occure: ", extremeDelays.size / extremeFlights.size * 100, "%"
+print "Flights delayed when precipitation upon departure/arrival: ", precipitationDelays.size / totalDelays.size * 100, "%"
+print "Percentage of flights delayed when precipitation occures: ", precipitationDelays.size / precipitationFlights.size * 100, "%"
+
+#landing wind speed vs delays
+print "Landing wind speed (1-weak 5-strong) vs delay:"
+windDf = df2
+smallest = np.min(windDf['DEST_WIND_SPEED'])
+largest = np.max(windDf['DEST_WIND_SPEED'])
+num_edges = 5
+windDf['BINNED_DEST_WIND_SPEED'] = np.digitize(windDf['DEST_WIND_SPEED'], np.linspace(smallest, largest, num_edges))
+print np.linspace(smallest, largest, num_edges)
+windDf = windDf.groupby(['BINNED_DEST_WIND_SPEED'])['ARR_DELAY'].mean()
+windDf = windDf.sort_values()
+print windDf
 
 #drop redundant columns
-df2 = df2.drop('UNIQUE_CARRIER', axis=1)
-df2 = df2.drop('ORIGIN', axis=1)
-df2 = df2.drop('DEST', axis=1)
-df2 = df2.drop('ORIGIN_AIRPORT_ID', axis=1)
-df2 = df2.drop('DEST_AIRPORT_ID', axis=1)
-df2 = df2.drop('CANCELLED', axis=1)
-df2 = df2.drop('DIVERTED', axis=1)
+#df2 = df2.drop('UNIQUE_CARRIER', axis=1)
+#df2 = df2.drop('ORIGIN', axis=1)
+#df2 = df2.drop('DEST', axis=1)
+#df2 = df2.drop('ORIGIN_AIRPORT_ID', axis=1)
+#df2 = df2.drop('DEST_AIRPORT_ID', axis=1)
+#df2 = df2.drop('CANCELLED', axis=1)
+#df2 = df2.drop('DIVERTED', axis=1)
 
 # remove INF and NaN's from the dataframe
-print df2.isnull().values.any()
-df2 = df2.replace([np.inf, -np.inf], np.nan)
-df2 = df2.fillna(0)
-print df2.isnull().values.any()
+#print df2.isnull().values.any()
+#df2 = df2.replace([np.inf, -np.inf], np.nan)
+#df2 = df2.fillna(0)
+#print df2.isnull().values.any()
 
 #print df2.describe()
 #print "###############################################"
-print df2.dtypes
+#print df2.dtypes
 #print "###############################################"
 #print np.where(np.isnan(df2))
 
 # assign final dataFrame to X, which will be used as a basis for train/test split
-X = df2.drop('ARR_DELAY', axis=1)
+#X = df2.drop('ARR_DELAY', axis=1)
 
